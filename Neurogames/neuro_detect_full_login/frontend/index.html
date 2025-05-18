@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -10,7 +9,7 @@
         <img src="assets/images/logo.png" class="logo" alt="Neuro Detect Logo">
         <h1>Neuro Detect</h1>
         <h3>Login to your account</h3>
-        <form onsubmit="return handleLogin(event)">
+        <form id="loginForm" onsubmit="return handleLogin(event)">
             <label for="username">Username:</label>
             <input type="text" id="username" placeholder="Enter your Username" required>
             <label for="password">Password:</label>
@@ -19,8 +18,29 @@
                 <button type="submit">Login</button>
             </div>
         </form>
-        <p>Not registered? <a href="#">Create an account</a></p>
+        <p>Not registered? <a href="#" onclick="openSignup()">Create an account</a></p>
     </div>
+
+    <!-- Signup Modal -->
+    <div id="signupModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeSignup()">&times;</span>
+            <h3>Sign Up</h3>
+            <form id="signupForm" onsubmit="return handleSignup(event)">
+                <label for="signup-username">Username:</label>
+                <input type="text" id="signup-username" required>
+                <label for="signup-password">Password:</label>
+                <input type="password" id="signup-password" required>
+                <label for="signup-email">Email:</label>
+                <input type="email" id="signup-email" required>
+                <div class="wrap">
+                    <button type="submit">Sign Up</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="assets/js/script.js"></script>
 </body>
 </html>
+
