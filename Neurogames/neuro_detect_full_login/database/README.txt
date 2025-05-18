@@ -1,0 +1,1 @@
+This folder can contain your SQLite/PostgreSQL database.

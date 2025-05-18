@@ -1,0 +1,58 @@
+
+.dashboard-container {
+  font-family: 'Segoe UI', sans-serif;
+  background: #f3f4f8;
+  padding: 30px;
+  text-align: center;
+}
+
+.user-info-card {
+  background: white;
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.user-info-card img {
+  height: 60px;
+  margin-bottom: 10px;
+}
+
+.play-button {
+  padding: 10px 20px;
+  background-color: #4CAF50;
+  color: white;
+  font-weight: bold;
+  border-radius: 8px;
+  border: none;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.dashboard-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 50px;
+  flex-wrap: wrap;
+}
+
+.dashboard-button {
+  text-align: center;
+  padding: 20px;
+}
+
+.dashboard-button img {
+  width: 100px;
+  margin-bottom: 10px;
+}
+
+.dashboard-button button {
+  padding: 12px 25px;
+  font-size: 16px;
+  background-color: #0288d1;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}

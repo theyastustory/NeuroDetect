@@ -1,0 +1,26 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neuro Detect Login</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+    <div class="main">
+        <img src="assets/images/logo.png" class="logo" alt="Neuro Detect Logo">
+        <h1>Neuro Detect</h1>
+        <h3>Login to your account</h3>
+        <form onsubmit="return handleLogin(event)">
+            <label for="username">Username:</label>
+            <input type="text" id="username" placeholder="Enter your Username" required>
+            <label for="password">Password:</label>
+            <input type="password" id="password" placeholder="Enter your Password" required>
+            <div class="wrap">
+                <button type="submit">Login</button>
+            </div>
+        </form>
+        <p>Not registered? <a href="#">Create an account</a></p>
+    </div>
+    <script src="assets/js/script.js"></script>
+</body>
+</html>
