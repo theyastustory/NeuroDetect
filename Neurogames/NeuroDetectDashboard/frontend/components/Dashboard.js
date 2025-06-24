@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import HealthProfileForm from './HealthProfileForm';
-import NeuroGames from './NeuroGames'; // <-- Your games component
+import NeuroGames from './NeuroGames'; // Your games component
 
 const Dashboard = () => {
   const [userInfo, setUserInfo] = useState(null);
@@ -19,7 +19,11 @@ const Dashboard = () => {
 
   // Save health profile handler
   const handleProfileSave = (profile) => {
-    fetch('/api/profile', { /* ... as before ... */ })
+    fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
+      body: JSON.stringify(profile),
+    })
       .then(res => res.json())
       .then(data => {
         setUserInfo(data);
@@ -47,17 +51,21 @@ const Dashboard = () => {
 
   return (
     <div>
-      {/* Health Profile */}
+      <h1>Welcome to Neuro Detect</h1>
       <div>
         <h2>User Information</h2>
-        {/* ...other fields... */}
+        <p><strong>Name:</strong> {userInfo.name}</p>
+        <p><strong>Age:</strong> {userInfo.age}</p>
+        <p><strong>Blood Group:</strong> {userInfo.bloodGroup}</p>
+        <p><strong>Height:</strong> {userInfo.height}</p>
+        <p><strong>Weight:</strong> {userInfo.weight}</p>
         {userInfo.brainAge ? (
           <p><strong>Brain Age:</strong> {userInfo.brainAge} years</p>
         ) : (
           <button onClick={() => setPlayingGame(true)}>Play Neuro Games</button>
         )}
       </div>
-      {/* Dashboard Buttons */}
+      {/* Add more dashboard features/buttons here if you want */}
     </div>
   );
 };
