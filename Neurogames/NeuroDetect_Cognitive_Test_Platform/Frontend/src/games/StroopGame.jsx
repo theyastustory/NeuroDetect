@@ -1,1 +1,0 @@
-// Stroop game logic
