@@ -1,49 +1,63 @@
-
 import React, { useEffect, useState } from 'react';
-import './Dashboard.css';
-import brainIcon from '../assets/icons/neuro-games.png';
-import detectorIcon from '../assets/icons/alzheimer-detector.png';
-import profileIcon from '../assets/icons/health-profile.png';
+import HealthProfileForm from './HealthProfileForm';
+import NeuroGames from './NeuroGames'; // <-- Your games component
 
 const Dashboard = () => {
-  const [userInfo, setUserInfo] = useState({
-    name: "Yastika Joshi",
-    age: 25,
-    bloodGroup: "B+",
-    height: "167 cm",
-    weight: "60 kg",
-    brainAge: null
-  });
+  const [userInfo, setUserInfo] = useState(null);
+  const [showProfileForm, setShowProfileForm] = useState(false);
+  const [playingGame, setPlayingGame] = useState(false);
+
+  // Fetch profile on mount
+  useEffect(() => {
+    fetch('/api/profile', { headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } })
+      .then(res => res.status === 404 ? null : res.json())
+      .then(data => {
+        if (!data) setShowProfileForm(true);
+        else setUserInfo(data);
+      });
+  }, []);
+
+  // Save health profile handler
+  const handleProfileSave = (profile) => {
+    fetch('/api/profile', { /* ... as before ... */ })
+      .then(res => res.json())
+      .then(data => {
+        setUserInfo(data);
+        setShowProfileForm(false);
+      });
+  };
+
+  // When game is done, save brain age
+  const handleGameComplete = (brainAge) => {
+    fetch('/api/profile/brain-age', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') },
+      body: JSON.stringify({ brainAge }),
+    })
+      .then(res => res.json())
+      .then(updatedProfile => {
+        setUserInfo(updatedProfile); // update dashboard with new brain age
+        setPlayingGame(false);       // return to dashboard
+      });
+  };
+
+  if (showProfileForm) return <HealthProfileForm onSave={handleProfileSave} />;
+  if (!userInfo) return <div>Loading...</div>;
+  if (playingGame) return <NeuroGames onComplete={handleGameComplete} />;
 
   return (
-    <div className="dashboard-container">
-      <h1>Welcome to Neuro Detect</h1>
-
-      <div className="user-info-card">
-        <img src={profileIcon} alt="Profile" />
+    <div>
+      {/* Health Profile */}
+      <div>
         <h2>User Information</h2>
-        <p><strong>Name:</strong> {userInfo.name}</p>
-        <p><strong>Age:</strong> {userInfo.age}</p>
-        <p><strong>Blood Group:</strong> {userInfo.bloodGroup}</p>
-        <p><strong>Height:</strong> {userInfo.height}</p>
-        <p><strong>Weight:</strong> {userInfo.weight}</p>
+        {/* ...other fields... */}
         {userInfo.brainAge ? (
           <p><strong>Brain Age:</strong> {userInfo.brainAge} years</p>
         ) : (
-          <button className="play-button">Play Neuro Games</button>
+          <button onClick={() => setPlayingGame(true)}>Play Neuro Games</button>
         )}
       </div>
-
-      <div className="dashboard-buttons">
-        <div className="dashboard-button">
-          <img src={brainIcon} alt="Neuro Games" />
-          <button>Neuro Games</button>
-        </div>
-        <div className="dashboard-button">
-          <img src={detectorIcon} alt="Alzheimer Detector" />
-          <button>Alzheimer Detector</button>
-        </div>
-      </div>
+      {/* Dashboard Buttons */}
     </div>
   );
 };
