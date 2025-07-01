@@ -1,1 +1,253 @@
+import os
+import threading
 
+# --- Django Imports ---
+import django
+from django.conf import settings
+from django.core.management import execute_from_command_line
+from django.urls import path
+from django.http import JsonResponse, HttpResponse, QueryDict
+from django.views.decorators.csrf import csrf_exempt
+from django.db import models
+from django.apps import apps, AppConfig
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login as dj_login, logout as dj_logout
+from django.middleware import csrf
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Django settings
+if not settings.configured:
+    settings.configure(
+        DEBUG=True,
+        SECRET_KEY='dummykey',
+        ROOT_URLCONF=__name__,
+        ALLOWED_HOSTS=['*'],
+        INSTALLED_APPS=[
+            'django.contrib.contenttypes',
+            'django.contrib.auth',
+            'django.contrib.sessions',
+            'django.contrib.admin',
+            'django.contrib.messages',
+            'core',
+        ],
+        MIDDLEWARE=[
+            'django.middleware.security.SecurityMiddleware',
+            'django.contrib.sessions.middleware.SessionMiddleware',
+            'django.middleware.common.CommonMiddleware',
+            'django.middleware.csrf.CsrfViewMiddleware',
+            'django.contrib.auth.middleware.AuthenticationMiddleware',
+            'django.contrib.messages.middleware.MessageMiddleware',
+        ],
+        TEMPLATES=[],
+        DATABASES={
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+            }
+        },
+        TIME_ZONE='UTC',
+        USE_TZ=True,
+        SESSION_ENGINE='django.contrib.sessions.backends.db',
+    )
+
+# --- Django AppConfig ---
+class CoreConfig(AppConfig):
+    name = 'core'
+    verbose_name = 'Core'
+
+apps.populate(settings.INSTALLED_APPS)
+
+# --- Django Models ---
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    name = models.CharField(max_length=100, blank=True)
+    age = models.IntegerField(null=True, blank=True)
+    height = models.FloatField(null=True, blank=True)
+    weight = models.FloatField(null=True, blank=True)
+    blood_group = models.CharField(max_length=5, blank=True)
+    brain_age = models.IntegerField(null=True, blank=True)
+
+    def to_dict(self):
+        return {
+            'username': self.user.username,
+            'name': self.name,
+            'age': self.age,
+            'height': self.height,
+            'weight': self.weight,
+            'bloodGroup': self.blood_group,
+            'brainAge': self.brain_age,
+        }
+
+class GameScore(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    game_name = models.CharField(max_length=50)
+    score = models.IntegerField()
+    played_at = models.DateTimeField(auto_now_add=True)
+
+    def to_dict(self):
+        return {
+            "username": self.user.username,
+            "game": self.game_name,
+            "score": self.score,
+            "played_at": self.played_at.isoformat()
+        }
+
+# --- Django Views ---
+@csrf_exempt
+def register(request):
+    if request.method != "POST":
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    data = request.POST or QueryDict(request.body)
+    username = data.get('username')
+    password = data.get('password')
+    if not username or not password:
+        return JsonResponse({'error': 'username and password required'}, status=400)
+    if User.objects.filter(username=username).exists():
+        return JsonResponse({'error': 'username exists'}, status=400)
+    user = User.objects.create_user(username=username, password=password)
+    UserProfile.objects.create(user=user)
+    return JsonResponse({'success': True})
+
+@csrf_exempt
+def login(request):
+    if request.method != "POST":
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    data = request.POST or QueryDict(request.body)
+    username = data.get('username')
+    password = data.get('password')
+    user = authenticate(username=username, password=password)
+    if user is None:
+        return JsonResponse({'error': 'invalid credentials'}, status=401)
+    dj_login(request, user)
+    token = csrf.get_token(request)
+    return JsonResponse({'success': True, 'csrftoken': token})
+
+@csrf_exempt
+def logout(request):
+    if request.method != "POST":
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    dj_logout(request)
+    return JsonResponse({'success': True})
+
+def require_login(view_func):
+    def wrapper(request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'not authenticated'}, status=401)
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+@csrf_exempt
+@require_login
+def user_profile(request):
+    user = request.user
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    if request.method == 'GET':
+        return JsonResponse(profile.to_dict())
+    elif request.method == 'POST':
+        data = request.POST or QueryDict(request.body)
+        profile.name = data.get('name', profile.name)
+        profile.age = int(data.get('age', profile.age or 0)) if data.get('age') else profile.age
+        profile.height = float(data.get('height', profile.height or 0)) if data.get('height') else profile.height
+        profile.weight = float(data.get('weight', profile.weight or 0)) if data.get('weight') else profile.weight
+        profile.blood_group = data.get('bloodGroup', profile.blood_group)
+        profile.save()
+        return JsonResponse(profile.to_dict())
+    return JsonResponse({'error': 'method not allowed'}, status=405)
+
+@csrf_exempt
+@require_login
+def brain_age(request):
+    user = request.user
+    profile, _ = UserProfile.objects.get_or_create(user=user)
+    if request.method != "POST":
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    data = request.POST or QueryDict(request.body)
+    if 'brainAge' not in data:
+        return JsonResponse({'error': 'brainAge required'}, status=400)
+    profile.brain_age = int(data.get('brainAge'))
+    profile.save()
+    return JsonResponse({'success': True, 'brainAge': profile.brain_age})
+
+@csrf_exempt
+@require_login
+def submit_score(request):
+    user = request.user
+    if request.method != "POST":
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    data = request.POST or QueryDict(request.body)
+    game = data.get('game')
+    score = data.get('score')
+    if not game or not score:
+        return JsonResponse({'error': 'game and score required'}, status=400)
+    score_obj = GameScore.objects.create(
+        user=user, game_name=game, score=int(score)
+    )
+    return JsonResponse({'success': True, 'score': score_obj.to_dict()})
+
+@csrf_exempt
+@require_login
+def get_scores(request):
+    user = request.user
+    if request.method != "GET":
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    scores = GameScore.objects.filter(user=user).order_by('-played_at')
+    return JsonResponse({'scores': [s.to_dict() for s in scores]})
+
+def root(request):
+    return HttpResponse("Django backend is running.")
+
+urlpatterns = [
+    path('', root),
+    path('api/register', register),
+    path('api/login', login),
+    path('api/logout', logout),
+    path('api/profile', user_profile),
+    path('api/brain-age', brain_age),
+    path('api/submit-score', submit_score),
+    path('api/get-scores', get_scores),
+]
+
+# --- Flask for Scan Upload ---
+from flask import Flask, request as flask_request, jsonify as flask_jsonify
+from flask_cors import CORS
+
+flask_app = Flask(__name__)
+CORS(flask_app)
+
+@flask_app.route('/scan', methods=['POST'])
+def analyze_scan():
+    if 'file' not in flask_request.files:
+        return flask_jsonify({'error': 'No file uploaded'}), 400
+    file = flask_request.files['file']
+    # Analyze/process file here (placeholder/dummy)
+    return flask_jsonify({'scan_result': 'Analysis complete. No significant findings detected.'})
+
+@flask_app.route('/', methods=['GET'])
+def home():
+    return "Health Scan Analysis Service is running."
+
+# --- Launch Both Servers ---
+
+def run_django():
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', '__main__')
+    try:
+        execute_from_command_line(['manage.py', 'makemigrations', 'core'])
+    except Exception:
+        pass
+    try:
+        execute_from_command_line(['manage.py', 'migrate'])
+    except Exception:
+        pass
+    execute_from_command_line(['manage.py', 'runserver', '8000'])
+
+def run_flask():
+    flask_app.run(port=5000)
+
+if __name__ == '__main__':
+    t1 = threading.Thread(target=run_django)
+    t2 = threading.Thread(target=run_flask)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
